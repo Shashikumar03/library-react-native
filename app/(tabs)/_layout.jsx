@@ -18,7 +18,7 @@ export default function TabLayout() {
         }}/>
         <Tabs.Screen name='addTask'
           options={{
-            tabBarLabel:"add Task",
+            tabBarLabel:"books",
             tabBarIcon:({colors})=><Ionicons name="clipboard" size={24} color={colors} />
         }}/>
         <Tabs.Screen name='profile'

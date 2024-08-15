@@ -9,10 +9,11 @@ export default function SignUpScreen() {
 
   const [emailAddress, setEmailAddress] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [username, setUserName] = React.useState('');
   const [pendingVerification, setPendingVerification] = React.useState(false);
   const [code, setCode] = React.useState('');
   const [buttonState, setButtonState] = React.useState(false)
-  const [verifyEmailButton, setVerifyEmailButton]= React.useState(false)
+  const [verifyEmailButton, setVerifyEmailButton] = React.useState(false)
 
   const onSignUpPress = async () => {
     if (!isLoaded) {
@@ -23,6 +24,8 @@ export default function SignUpScreen() {
       await signUp.create({
         emailAddress,
         password,
+        username,
+        password: password,
       });
 
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
@@ -66,7 +69,7 @@ export default function SignUpScreen() {
         ToastAndroid.show(error.message, ToastAndroid.LONG, ToastAndroid.TOP);
         alert(error.longMessage)
       });
-    }finally{
+    } finally {
       setVerifyEmailButton(false)
     }
   };
@@ -86,6 +89,18 @@ export default function SignUpScreen() {
             value={emailAddress}
             placeholder="Email..."
             onChangeText={(email) => setEmailAddress(email)}
+            style={{
+              fontWeight: "bold",
+              padding: 10,
+              borderWidth: 2,
+              borderRadius: 8,
+            }}
+          />
+          <TextInput
+            autoCapitalize="none"
+            value={username}
+            placeholder="Username..."
+            onChangeText={(userName) => setUserName(username)}
             style={{
               fontWeight: "bold",
               padding: 10,
@@ -138,33 +153,33 @@ export default function SignUpScreen() {
           alignItems: "center",
           width: "100%",
           backgroundColor: "pink",
-          gap:10
+          gap: 10
         }}>
           <TextInput value={code}
             style={{
               borderWidth: 2,
-              width:"80%",
-              padding:8,
-              borderRadius:10
+              width: "80%",
+              padding: 8,
+              borderRadius: 10
 
             }} placeholder="Code..." onChangeText={(code) => setCode(code)} />
           {/* <Button title="Verify Email" onPress={onPressVerify} /> */}
           <TouchableOpacity onPress={onPressVerify}
-           style={{
-            backgroundColor:"blue",
-            padding:2,
-            borderRadius:10
+            style={{
+              backgroundColor: "blue",
+              padding: 2,
+              borderRadius: 10
 
-           }}
-           disabled={verifyEmailButton}
+            }}
+            disabled={verifyEmailButton}
           >
             <Text
-            style={{
-              padding:10,
-              color:"white",
-              fontWeight:"bold",
-              fontSize:16
-            }}>Verify Email</Text>
+              style={{
+                padding: 10,
+                color: "white",
+                fontWeight: "bold",
+                fontSize: 16
+              }}>Verify Email</Text>
           </TouchableOpacity>
         </View>
       )}

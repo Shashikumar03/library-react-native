@@ -53,7 +53,7 @@ export default function Profile() {
       }}
     >
       <Text>
-        Hello, {user ? user.fullName : "User"} welcome to timesheet
+        Hello, {user ? user?.primaryEmailAddress?.emailAddress : "User"} welcome to timesheet
       </Text>
       <Button 
         title="Sign Out" 

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getBaseUrl } from '../../constants/url/url';
 
 // Define the function to create a student
 const createStudent = async (studentData) => {
@@ -6,7 +7,9 @@ const createStudent = async (studentData) => {
     
   try {
     // Replace 'https://your-api-url.com/api/student/' with your actual API endpoint
-    const response = await axios.post('http://192.168.0.189:8283/api/student/', studentData, {
+    // http://192.168.73.125:8283/api/student/
+    // http://192.168.0.189:8283/api/student/' anty wifi
+    const response = await axios.post(`${getBaseUrl()}/api/student/`, studentData, {
       headers: {
         'Content-Type': 'application/json',
         // Add other headers if needed (e.g., Authorization)

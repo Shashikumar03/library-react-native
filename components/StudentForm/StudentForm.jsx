@@ -1,18 +1,22 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, Switch, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import createStudent from '../../Service/StudentService/CreateStudent';
+import { useUser } from '@clerk/clerk-expo';
 
 export default function StudentForm({ openClose }) {
   // Initializing with a default value based on the prop openClose
   const [isModalOpen, setIsModalOpen] = useState(true);
+     const {user}=useUser()
 
   const [studentForm, setStudentForm] = useState({
     name: "",
+    email: user?.primaryEmailAddress?.emailAddress,
     password: "",
     phoneNumber: "",
     gender: true, // true for Male, false for Female
     semester: "",
     address: "",
+    department:"ECE"
   });
 
   const handleGenderToggle = () => {
