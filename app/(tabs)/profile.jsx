@@ -1,65 +1,96 @@
-
 import { useAuth, useUser } from "@clerk/clerk-expo";
-import { Text, View, Button } from "react-native";
+import { Text, View, Button, StyleSheet } from "react-native";
 import React, { useState, useEffect } from "react";
-import { useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
+import { GetStudenDetailsByEmail } from "../../Service/StudentService/GetStudentDetailsByEmail";
 
 export default function Profile() {
   const { isLoaded, isSignedIn, signOut } = useAuth();
-  const {user}=useUser()
+  const { user } = useUser();
   const router = useRouter();
-  const [isSignOutComplete, setIsSignOutComplete] = useState(false);
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
+  const [studentDetail, setStudentDetail] = useState(null);
 
-  // useEffect(() => {
-  //   if (isSignOutComplete) {
-  //     console.log("Sign out complete, redirecting...");
-  //     // router.replace("/Login"); // Ensure the route matches your setup
-  //   }
-  // }, [isSignOutComplete, router]);
+  useEffect(() => {
+    if (user?.primaryEmailAddress?.emailAddress) {
+      GetStudenDetailsByEmail(user.primaryEmailAddress.emailAddress)
+        .then((details) => setStudentDetail(details))
+        .catch((error) => console.error("Error fetching student details:", error));
+    }
+  }, [user]);
 
   const handleSignOut = async () => {
-    if (isButtonDisabled) return; // Prevent duplicate clicks
+    if (isButtonDisabled) return;
     setIsButtonDisabled(true);
-    
+
     try {
-      console.log("Attempting to sign out...");
       await signOut();
-      return
-      // router.replace("/Login")
-      setIsSignOutComplete(true); // Trigger redirection
-      console.log("Sign out successful");
+      return <Redirect href={"/(public)"}/>
     } catch (error) {
       console.error("Error signing out:", error);
     } finally {
-      setIsButtonDisabled(false); // Re-enable button if needed
+      setIsButtonDisabled(false);
     }
   };
 
   if (!isLoaded) {
-    return <Text>Loading...</Text>; // Show loading state while data is being fetched
+    return <Text>Loading...</Text>;
   }
 
   if (!isSignedIn) {
-    return <Text>Please sign in to access this page.</Text>; // Handle case where user is not signed in
+    return <Text>Please sign in to access this page.</Text>;
   }
+  // const {isSignedIn}= useUser()
+
+  console.log("check Signed In",isSignedIn)
 
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <Text>
-        Hello, {user ? user?.primaryEmailAddress?.emailAddress : "User"} welcome to timesheet
-      </Text>
-      <Button 
-        title="Sign Out" 
-        onPress={handleSignOut} 
-        disabled={isButtonDisabled}
-      />
+    <View style={styles.container}>
+      <View style={styles.profileBox}>
+        <Text style={styles.greeting}>
+          Hello, {studentDetail?.name ? studentDetail.name : "User"}! Welcome to your profile.
+        </Text>
+        {studentDetail && (
+          <View>
+            <Text>Name: {studentDetail.name}</Text>
+            <Text>Email: {studentDetail.email}</Text>
+            <Text>Address: {studentDetail.address}</Text>
+            <Text>Department: {studentDetail.department}</Text>
+            <Text>Gender: {studentDetail.gender}</Text>
+            <Text>Phone Number: {studentDetail.phoneNumber}</Text>
+            <Text>Roll: {studentDetail.roll}</Text>
+            <Text>Semester: {studentDetail.semester}</Text>
+            <Text>Number of Books Issued: {studentDetail.noOfBookIssue}</Text>
+          </View>
+        )}
+        <Button title="Sign Out" onPress={handleSignOut} disabled={isButtonDisabled} />
+      </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  profileBox: {
+    width: '90%',
+    padding: 20,
+    borderRadius: 10,
+    backgroundColor: "#fff",
+    // Box shadow properties for iOS and Android
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5, // This is for Android box shadow
+  },
+  greeting: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 20,
+  },
+});

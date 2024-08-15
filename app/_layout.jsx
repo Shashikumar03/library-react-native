@@ -2,7 +2,8 @@ import { ClerkLoaded, ClerkProvider, } from "@clerk/clerk-expo";
 import { useFonts } from "expo-font";
 import { Link, Slot, Stack, useRouter } from "expo-router";
 import { View, Text, StyleSheet } from "react-native";
-import { SignedIn, SignedOut, useUser } from "@clerk/clerk-expo";
+import { SignedIn, SignedOut, useUser, } from "@clerk/clerk-expo";
+// import {Login} from "./(public)/login"
 // import Login from "./aaa"
 
 import * as SecureStore from 'expo-secure-store';
@@ -66,10 +67,17 @@ export default function RootLayout() {
             headerShown: false
           }}>
             <Stack.Screen name="(public)" />
+            {/* <Login/> */}
+            
+            
           </Stack>
 
 
         </SignedOut>
+        {/* <UserButton /> */}
+        
+          
+        
       </ClerkLoaded>
 
     </ClerkProvider>

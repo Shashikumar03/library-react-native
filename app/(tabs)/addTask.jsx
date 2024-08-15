@@ -9,13 +9,19 @@ export default function Books() {
   const [issuedBooks, setIssuedBooks] = useState([])
   const [submittedBooks, setSubmittedBooks] = useState([])
   const [refreshing, setRefreshing] = useState(false)
-  const {user}=useUser()
+  const {user, isSignedIn}=useUser()
+  if(!isSignedIn){
+    return <View style={{ flex:1,justifyContent:"center", alignItems:"center"}}>
+
+      <Text>plzz sign in</Text>
+      
+      </View>}
 
   const fetchStudentData = async () => {
     try {
       const studentData = await GetStudenDetailsByEmail(user?.primaryEmailAddress?.emailAddress);
       setStudentDetails(studentData);
-      const books = studentData.booksDto || [];
+      const books = studentData?.booksDto || [];
 
       const issued = books.filter(book => book.dateOfSubmission === null);
       const submitted = books.filter(book => book.dateOfSubmission !== null);
@@ -51,6 +57,7 @@ export default function Books() {
       <Text style={styles.bookDetail}>Date of Issue: {item.dateOfIssue}</Text>
       <Text style={styles.bookDetail}>Fine: {item.fine}</Text>
       <Text style={styles.bookDetail}>{item.dateOfSubmission ? `Date of Submission: ${item.dateOfSubmission}` : 'Not yet submitted'}</Text>
+      
     </View>
   );
 
