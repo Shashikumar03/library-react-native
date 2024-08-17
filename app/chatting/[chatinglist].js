@@ -1,12 +1,15 @@
-import { View, Text, FlatList, StyleSheet } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import getMessageOfTwoUser from '../../Service/Message/GetMessageOfTwoUsers';
 import { useUser } from '@clerk/clerk-expo';
+import sendMessage from '../../Service/Message/SendMessage';
+// import sendMessageToUser from '../../Service/Message/SendMessageToUser'; // Assuming you have a function to send messages
 
 export default function ChattingList() {
   const navigation = useNavigation();
   const [getUsersMessage, setGetUserMessage] = useState([]);
+  const [messageText, setMessageText] = useState('');
   const { chatinglist } = useLocalSearchParams();
   const { user } = useUser();
 
@@ -27,6 +30,32 @@ export default function ChattingList() {
     }
   };
 
+  const handleSendMessage = async () => {
+    if (messageText.trim()) {
+      try {
+        const newMessage = {
+          senderId: user?.primaryEmailAddress?.emailAddress,
+          receiverId: chatinglist,
+          text: messageText.trim(),
+        };
+
+        // Send the message using your service
+        const sendedMessageToUser =await sendMessage(newMessage)
+
+        // Add the new message to the list
+        console.log(sendedMessageToUser)
+    
+        setGetUserMessage((prevMessages) => [sendedMessageToUser, ...prevMessages]);
+        console.log(getUsersMessage)
+
+        // Clear the input field
+        setMessageText('');
+      } catch (error) {
+        console.log('Error sending message:', error);
+      }
+    }
+  };
+
   const renderItem = ({ item }) => {
     const isCurrentUser = item.senderId === user?.primaryEmailAddress?.emailAddress;
 
@@ -39,21 +68,36 @@ export default function ChattingList() {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={90} // Adjust as needed for your app
+    >
       <FlatList
         data={getUsersMessage}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
-        inverted // This will reverse the FlatList so the most recent message appears at the bottom
+        keyExtractor={(item,index) => index}
+        inverted
       />
-    </View>
+
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Type a message..."
+          value={messageText}
+          onChangeText={setMessageText}
+        />
+        <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
+          <Text style={styles.sendButtonText}>Send</Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 10,
     backgroundColor: '#e5ddd5',
   },
   messageContainer: {
@@ -77,5 +121,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'gray',
     alignSelf: 'flex-end',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderTopWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#fff',
+  },
+  input: {
+    flex: 1,
+    height: 40,
+    paddingHorizontal: 10,
+    backgroundColor: '#f1f1f1',
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  sendButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  sendButtonText: {
+    color: '#fff',
+    fontSize: 16,
   },
 });
