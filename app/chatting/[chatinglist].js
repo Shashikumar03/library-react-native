@@ -1,10 +1,9 @@
-import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import getMessageOfTwoUser from '../../Service/Message/GetMessageOfTwoUsers';
 import { useUser } from '@clerk/clerk-expo';
 import sendMessage from '../../Service/Message/SendMessage';
-// import sendMessageToUser from '../../Service/Message/SendMessageToUser'; // Assuming you have a function to send messages
 
 export default function ChattingList() {
   const navigation = useNavigation();
@@ -12,6 +11,7 @@ export default function ChattingList() {
   const [messageText, setMessageText] = useState('');
   const { chatinglist } = useLocalSearchParams();
   const { user } = useUser();
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({
@@ -19,14 +19,21 @@ export default function ChattingList() {
       headerTitle: chatinglist,
     });
     getConversationOfTwoUsers();
-  }, []);
+  }, [chatinglist]);
 
   const getConversationOfTwoUsers = async () => {
+    setLoading(true);
     try {
+      console.log('Fetching messages...');
       const getMessage = await getMessageOfTwoUser(user?.primaryEmailAddress?.emailAddress, chatinglist);
+      console.log('Messages fetched:', getMessage);
+      // Sort messages by timestamp if they are not already sorted
+      getMessage.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       setGetUserMessage(getMessage);
     } catch (err) {
-      console.log(err);
+      console.log('Error fetching messages:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -37,16 +44,16 @@ export default function ChattingList() {
           senderId: user?.primaryEmailAddress?.emailAddress,
           receiverId: chatinglist,
           text: messageText.trim(),
+          timestamp: new Date().toISOString(), // Ensure timestamp is included
         };
 
         // Send the message using your service
-        const sendedMessageToUser =await sendMessage(newMessage)
+        console.log('Sending message:', newMessage);
+        const sendedMessageToUser = await sendMessage(newMessage);
+        console.log('Message sent:', sendedMessageToUser);
 
         // Add the new message to the list
-        console.log(sendedMessageToUser)
-    
         setGetUserMessage((prevMessages) => [sendedMessageToUser, ...prevMessages]);
-        console.log(getUsersMessage)
 
         // Clear the input field
         setMessageText('');
@@ -56,7 +63,7 @@ export default function ChattingList() {
     }
   };
 
-  const renderItem = ({ item }) => {
+  const renderItem = useCallback(({ item }) => {
     const isCurrentUser = item.senderId === user?.primaryEmailAddress?.emailAddress;
 
     return (
@@ -65,32 +72,37 @@ export default function ChattingList() {
         <Text style={styles.timestamp}>{new Date(item.timestamp).toLocaleTimeString()}</Text>
       </View>
     );
-  };
+  }, [user?.primaryEmailAddress?.emailAddress]);
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={90} // Adjust as needed for your app
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 100} // Adjust based on your header height and layout
     >
-      <FlatList
-        data={getUsersMessage}
-        renderItem={renderItem}
-        keyExtractor={(item,index) => index}
-        inverted
-      />
-
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Type a message..."
-          value={messageText}
-          onChangeText={setMessageText}
-        />
-        <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
-          <Text style={styles.sendButtonText}>Send</Text>
-        </TouchableOpacity>
-      </View>
+      {loading ? (
+        <ActivityIndicator size="large" color="#007AFF" style={styles.loader} />
+      ) : (
+        <>
+          <FlatList
+            data={getUsersMessage}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id.toString()} // Use unique id as key
+            inverted // Ensure messages are shown from bottom to top
+          />
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Type a message..."
+              value={messageText}
+              onChangeText={setMessageText}
+            />
+            <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
+              <Text style={styles.sendButtonText}>Send</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -99,6 +111,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#e5ddd5',
+  },
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   messageContainer: {
     marginVertical: 5,
