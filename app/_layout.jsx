@@ -5,6 +5,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { SignedIn, SignedOut, useUser, } from "@clerk/clerk-expo";
 // import {Login} from "./(public)/login"
 // import Login from "./aaa"
+// import ChatScreen from "./../screen/chatScreen/ChatScreen"
 
 import * as SecureStore from 'expo-secure-store';
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
@@ -59,6 +60,8 @@ export default function RootLayout() {
             headerShown: false
           }}>
             <Stack.Screen name="(tabs)" />
+            {/* <Stack.Screen name="/ChatScreen"   component={ChatScreen}/> */}
+            
           </Stack>
         </SignedIn>
         <SignedOut>

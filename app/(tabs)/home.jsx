@@ -1,36 +1,49 @@
-import { View, Text, StyleSheet, StatusBar, TouchableOpacity } from 'react-native'
-import React, { useEffect } from 'react'
-import Model from '../../components/Modal/Model'
+import { View, Text, StyleSheet, StatusBar, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import Model from '../../components/Modal/Model';
 import { useSignIn, useUser } from '@clerk/clerk-expo';
-// import GetStudentById from '../../Service/StudentService/GetStudentById'
-// import { GetStudenDetailsByEmail } from '../../Service/StudentService/GetStudentDetailsByEmail'
+// import ChatScreen from '../../screen/chatScreen/ChatScreen';
+import { useRouter } from 'expo-router';
 
 export default function Home() {
-  const { signIn, setActive, isLoaded } = useSignIn();
-   const {isSignedIn}= useUser()
-  console.log("check Signed In",isSignedIn)
-  if(!isSignedIn){
-    return <View style={{ flex:1,justifyContent:"center", alignItems:"center"}}>
+  const [showChat, setShowChat] = useState(false);
+  const { isSignedIn } = useUser();
+  const router= useRouter()
+  console.log("check Signed In", isSignedIn);
 
-      <Text>plzz sign in</Text>
-      
+  if (!isSignedIn) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>Please sign in</Text>
       </View>
+    );
   }
+
   useEffect(() => {
-    // GetStudenDetailsByEmail()
-  }, [])
+    // Additional logic can be added here if needed
+  }, []);
+
+  const handleChatScreen = () => {
+    setShowChat(true);
+  };
+
+  if (showChat) {
+    router.push("/chatting/ChatScreen")
+    // return <ChatScreen />;
+  }
+
   return (
     <View style={styles.center}>
-      <Text>Welcome to Library management</Text>
+      <Text>Welcome to Library Management</Text>
       <Model />
-      <TouchableOpacity style={[styles.questionPaper]} onPress={()=>alert("this features will come in version 2.O")}>
-        <Text style={{ fontWeight: "bold" }}>Download Previous year question paper</Text>
+      <TouchableOpacity style={styles.questionPaper} onPress={() => alert("This feature is coming soon")}>
+        <Text style={{ fontWeight: "bold" }}>Download Previous Year Question Paper</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={[styles.questionPaper]} onPress={()=>alert("this features will come in version 3.O")}>
+      <TouchableOpacity style={styles.questionPaper} onPress={handleChatScreen}>
         <Text style={{ fontWeight: "bold" }}>Chatting</Text>
       </TouchableOpacity>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -45,4 +58,4 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: 10
   }
-})
+});
