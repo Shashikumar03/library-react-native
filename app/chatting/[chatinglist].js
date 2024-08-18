@@ -1,6 +1,6 @@
-import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, RefreshControl } from 'react-native';
 import React, { useEffect, useState, useCallback } from 'react';
-import { useLocalSearchParams, useNavigation } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useFocusEffect } from 'expo-router';
 import getMessageOfTwoUser from '../../Service/Message/GetMessageOfTwoUsers';
 import { useUser } from '@clerk/clerk-expo';
 import sendMessage from '../../Service/Message/SendMessage';
@@ -12,6 +12,7 @@ export default function ChattingList() {
   const { chatinglist } = useLocalSearchParams();
   const { user } = useUser();
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({
@@ -21,13 +22,16 @@ export default function ChattingList() {
     getConversationOfTwoUsers();
   }, [chatinglist]);
 
+  useFocusEffect(
+    useCallback(() => {
+      getConversationOfTwoUsers();
+    }, [chatinglist])
+  );
+
   const getConversationOfTwoUsers = async () => {
     setLoading(true);
     try {
-      console.log('Fetching messages...');
       const getMessage = await getMessageOfTwoUser(user?.primaryEmailAddress?.emailAddress, chatinglist);
-      console.log('Messages fetched:', getMessage);
-      // Sort messages by timestamp if they are not already sorted
       getMessage.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       setGetUserMessage(getMessage);
     } catch (err) {
@@ -44,16 +48,17 @@ export default function ChattingList() {
           senderId: user?.primaryEmailAddress?.emailAddress,
           receiverId: chatinglist,
           text: messageText.trim(),
-          timestamp: new Date().toISOString(), // Ensure timestamp is included
+          timestamp: new Date().toISOString(),
         };
 
-        // Send the message using your service
-        console.log('Sending message:', newMessage);
-        const sendedMessageToUser = await sendMessage(newMessage);
-        console.log('Message sent:', sendedMessageToUser);
+        // Optimistically update the message list
+        setGetUserMessage((prevMessages) => [newMessage, ...prevMessages]);
 
-        // Add the new message to the list
-        setGetUserMessage((prevMessages) => [sendedMessageToUser, ...prevMessages]);
+        // Send the message using your service
+        const sendedMessageToUser = await sendMessage(newMessage);
+
+        // Refresh the messages
+        getConversationOfTwoUsers();
 
         // Clear the input field
         setMessageText('');
@@ -74,11 +79,17 @@ export default function ChattingList() {
     );
   }, [user?.primaryEmailAddress?.emailAddress]);
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await getConversationOfTwoUsers();
+    setRefreshing(false);
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 100} // Adjust based on your header height and layout
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 100}
     >
       {loading ? (
         <ActivityIndicator size="large" color="#007AFF" style={styles.loader} />
@@ -87,8 +98,9 @@ export default function ChattingList() {
           <FlatList
             data={getUsersMessage}
             renderItem={renderItem}
-            keyExtractor={(item) => item.id.toString()} // Use unique id as key
-            inverted // Ensure messages are shown from bottom to top
+            keyExtractor={(item, index) => index}
+            inverted
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           />
           <View style={styles.inputContainer}>
             <TextInput
