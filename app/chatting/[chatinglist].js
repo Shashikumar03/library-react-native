@@ -1,39 +1,29 @@
-import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, RefreshControl } from 'react-native';
-import React, { useEffect, useState, useCallback } from 'react';
-import { useLocalSearchParams, useNavigation, useFocusEffect } from 'expo-router';
-import getMessageOfTwoUser from '../../Service/Message/GetMessageOfTwoUsers';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Text, View, TextInput, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
+import SockJS from 'sockjs-client';
+import Stomp from 'stompjs';
 import { useUser } from '@clerk/clerk-expo';
-import sendMessage from '../../Service/Message/SendMessage';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
+import getMessageOfTwoUser from '../../Service/Message/GetMessageOfTwoUsers';
 
-export default function ChattingList() {
-  const navigation = useNavigation();
-  const [getUsersMessage, setGetUserMessage] = useState([]);
-  const [messageText, setMessageText] = useState('');
-  const { chatinglist } = useLocalSearchParams();
-  const { user } = useUser();
+const SOCKET_URL = 'http://192.168.0.189:8283/ws-message';
+
+const Chatting = () => {
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const stompClient = useRef(null);
+  const { user } = useUser();
+  const { chatinglist } = useLocalSearchParams();
+  const navigation = useNavigation()
 
-  useEffect(() => {
-    navigation.setOptions({
-      headerShown: true,
-      headerTitle: chatinglist,
-    });
-    getConversationOfTwoUsers();
-  }, [chatinglist]);
-
-  useFocusEffect(
-    useCallback(() => {
-      getConversationOfTwoUsers();
-    }, [chatinglist])
-  );
-
-  const getConversationOfTwoUsers = async () => {
+  const getConversationOfUsers = async () => {
     setLoading(true);
     try {
-      const getMessage = await getMessageOfTwoUser(user?.primaryEmailAddress?.emailAddress, chatinglist);
-      getMessage.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      setGetUserMessage(getMessage);
+      const fetchedMessages = await getMessageOfTwoUser(user?.primaryEmailAddress?.emailAddress, chatinglist);
+      fetchedMessages.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Sort messages by timestamp
+      setMessages(fetchedMessages);
     } catch (err) {
       console.log('Error fetching messages:', err);
     } finally {
@@ -41,34 +31,56 @@ export default function ChattingList() {
     }
   };
 
-  const handleSendMessage = async () => {
-    if (messageText.trim()) {
-      try {
-        const newMessage = {
-          senderId: user?.primaryEmailAddress?.emailAddress,
-          receiverId: chatinglist,
-          text: messageText.trim(),
-          timestamp: new Date().toISOString(),
-        };
+  useEffect(() => {
+    navigation.setOptions({
+      headerShown: true,
+      headerTitle: chatinglist,
+    });
+    getConversationOfUsers();
 
-        // Optimistically update the message list
-        setGetUserMessage((prevMessages) => [newMessage, ...prevMessages]);
+    const socket = new SockJS(SOCKET_URL);
+    stompClient.current = Stomp.over(socket);
 
-        // Send the message using your service
-        const sendedMessageToUser = await sendMessage(newMessage);
+    stompClient.current.connect({}, () => {
+      console.log('Connected!!');
 
-        // Refresh the messages
-        getConversationOfTwoUsers();
+      stompClient.current.subscribe('/topic/message', (msg) => {
+        const receivedMessage = JSON.parse(msg.body);
+        setMessages((prevMessages) => [receivedMessage, ...prevMessages]); // Add the new message to the top
+      });
+    }, (error) => {
+      console.error('STOMP error:', error);
+    });
 
-        // Clear the input field
-        setMessageText('');
-      } catch (error) {
-        console.log('Error sending message:', error);
+    return () => {
+      if (stompClient.current) {
+        stompClient.current.disconnect(() => {
+          console.log('Disconnected!');
+        });
       }
+    };
+  }, []);
+
+  const handleSendMessage = () => {
+    if (stompClient.current && newMessage.trim()) {
+      const chatMessage = {
+        text: newMessage,
+        senderId: user?.primaryEmailAddress?.emailAddress,
+        receiverId: chatinglist,
+        timestamp: new Date().toISOString(), // Add timestamp for consistency
+      };
+      stompClient.current.send('/app/sendMessage', {}, JSON.stringify(chatMessage));
+      setNewMessage(''); // Clear input field
     }
   };
 
-  const renderItem = useCallback(({ item }) => {
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await getConversationOfUsers();
+    setRefreshing(false);
+  };
+
+  const renderMessage = useCallback(({ item }) => {
     const isCurrentUser = item.senderId === user?.primaryEmailAddress?.emailAddress;
 
     return (
@@ -78,12 +90,6 @@ export default function ChattingList() {
       </View>
     );
   }, [user?.primaryEmailAddress?.emailAddress]);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await getConversationOfTwoUsers();
-    setRefreshing(false);
-  };
 
   return (
     <KeyboardAvoidingView
@@ -96,9 +102,9 @@ export default function ChattingList() {
       ) : (
         <>
           <FlatList
-            data={getUsersMessage}
-            renderItem={renderItem}
-            keyExtractor={(item, index) => index}
+            data={messages}
+            renderItem={renderMessage}
+            keyExtractor={(item) => item.id.toString()}
             inverted
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           />
@@ -106,8 +112,8 @@ export default function ChattingList() {
             <TextInput
               style={styles.input}
               placeholder="Type a message..."
-              value={messageText}
-              onChangeText={setMessageText}
+              value={newMessage}
+              onChangeText={setNewMessage}
             />
             <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
               <Text style={styles.sendButtonText}>Send</Text>
@@ -117,7 +123,7 @@ export default function ChattingList() {
       )}
     </KeyboardAvoidingView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -178,3 +184,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
+
+export default Chatting;
