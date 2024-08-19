@@ -24,6 +24,11 @@ export default function ChatScreen() {
 
   useEffect(() => {
     fetchStudentDetails();
+    navigation.setOptions({
+      headerTitle: "chatting page"
+    });
+    
+  
   }, []);
 
   const onRefresh = useCallback(async () => {

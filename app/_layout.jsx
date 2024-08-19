@@ -57,7 +57,8 @@ export default function RootLayout() {
       <ClerkLoaded>
         <SignedIn>
           <Stack screenOptions={{
-            headerShown: false
+            headerShown: true,
+            
           }}>
             <Stack.Screen name="(tabs)" />
             {/* <Stack.Screen name="/ChatScreen"   component={ChatScreen}/> */}

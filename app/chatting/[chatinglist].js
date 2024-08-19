@@ -6,7 +6,7 @@ import { useUser } from '@clerk/clerk-expo';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import getMessageOfTwoUser from '../../Service/Message/GetMessageOfTwoUsers';
 
-const SOCKET_URL = 'http://192.168.73.125:8283/ws-message';
+const SOCKET_URL = 'http://192.168.0.189:8283/ws-message';
 
 const Chatting = () => {
   const [messages, setMessages] = useState([]);
