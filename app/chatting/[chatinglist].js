@@ -1,22 +1,23 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Text, View, TextInput, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
+import { Text, View, TextInput, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 import { useUser } from '@clerk/clerk-expo';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import getMessageOfTwoUser from '../../Service/Message/GetMessageOfTwoUsers';
 
-const SOCKET_URL = 'http://192.168.0.189:8283/ws-message';
+const SOCKET_URL = 'http://192.168.73.125:8283/ws-message';
 
 const Chatting = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const [typingStatus, setTypingStatus] = useState(null);
   const stompClient = useRef(null);
   const { user } = useUser();
   const { chatinglist } = useLocalSearchParams();
-  const navigation = useNavigation()
+  const navigation = useNavigation();
+  const typingTimeoutRef = useRef(null);
 
   const getConversationOfUsers = async () => {
     setLoading(true);
@@ -32,10 +33,9 @@ const Chatting = () => {
   };
 
   useEffect(() => {
-    navigation.setOptions({
-      headerShown: true,
-      headerTitle: chatinglist,
-    });
+    // Set the initial header title
+    updateHeaderTitle(chatinglist);
+
     getConversationOfUsers();
 
     const socket = new SockJS(SOCKET_URL);
@@ -44,9 +44,28 @@ const Chatting = () => {
     stompClient.current.connect({}, () => {
       console.log('Connected!!');
 
+      // Subscribe to messages
       stompClient.current.subscribe('/topic/message', (msg) => {
         const receivedMessage = JSON.parse(msg.body);
         setMessages((prevMessages) => [receivedMessage, ...prevMessages]); // Add the new message to the top
+      });
+
+      // Subscribe to typing status
+      stompClient.current.subscribe('/topic/typing', (msg) => {
+        const typingData = JSON.parse(msg.body);
+        if (typingData.senderId !== user?.primaryEmailAddress?.emailAddress && typingData.receiverId === user?.primaryEmailAddress?.emailAddress) {
+          setTypingStatus(`${typingData.senderId} is typing...`);
+          updateHeaderTitle(`${typingData.senderId} is typing...`, true);
+        }
+      });
+
+      // Subscribe to stop typing status
+      stompClient.current.subscribe('/topic/stopTyping', (msg) => {
+        const typingData = JSON.parse(msg.body);
+        if (typingData.senderId !== user?.primaryEmailAddress?.emailAddress && typingData.receiverId === user?.primaryEmailAddress?.emailAddress) {
+          setTypingStatus(null);
+          updateHeaderTitle(chatinglist, false);
+        }
       });
     }, (error) => {
       console.error('STOMP error:', error);
@@ -61,6 +80,38 @@ const Chatting = () => {
     };
   }, []);
 
+  const updateHeaderTitle = (title, isTyping = false) => {
+    navigation.setOptions({
+      headerTitle: () => (
+        <Text style={{ color: isTyping ? 'blue' : 'black' }}>{title}</Text>
+      ),
+    });
+  };
+
+  const handleTyping = () => {
+    if (stompClient.current && newMessage.trim()) {
+      const typingMessage = {
+        senderId: user?.primaryEmailAddress?.emailAddress,
+        receiverId: chatinglist,
+        isTyping: true,
+      };
+      stompClient.current.send('/app/typing', {}, JSON.stringify(typingMessage));
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      typingTimeoutRef.current = setTimeout(() => {
+        const stopTypingMessage = {
+          senderId: user?.primaryEmailAddress?.emailAddress,
+          receiverId: chatinglist,
+          isTyping: false,
+        };
+        stompClient.current.send('/app/stopTyping', {}, JSON.stringify(stopTypingMessage));
+      }, 3000);
+    }
+  };
+
   const handleSendMessage = () => {
     if (stompClient.current && newMessage.trim()) {
       const chatMessage = {
@@ -71,13 +122,8 @@ const Chatting = () => {
       };
       stompClient.current.send('/app/sendMessage', {}, JSON.stringify(chatMessage));
       setNewMessage(''); // Clear input field
+      setTypingStatus(null); // Clear typing status
     }
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await getConversationOfUsers();
-    setRefreshing(false);
   };
 
   const renderMessage = useCallback(({ item }) => {
@@ -106,14 +152,17 @@ const Chatting = () => {
             renderItem={renderMessage}
             keyExtractor={(item) => item.id.toString()}
             inverted
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           />
+        
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
               placeholder="Type a message..."
               value={newMessage}
-              onChangeText={setNewMessage}
+              onChangeText={(text) => {
+                setNewMessage(text);
+                handleTyping();
+              }}
             />
             <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
               <Text style={styles.sendButtonText}>Send</Text>
