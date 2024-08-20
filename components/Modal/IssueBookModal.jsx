@@ -7,16 +7,15 @@ import {
   Modal,
   StyleSheet,
   TouchableOpacity,
-  ToastAndroid
+  ToastAndroid,
+  ScrollView
 } from 'react-native';
 import { submitBookService } from '../../Service/AdminService/SubmitBookService';
-import { Slot } from 'expo-router';
-// import { bookSubmitService } from './bookSubmitService';
 
-export default function IssueBookModal({token}) {
+export default function IssueBookModal({ token }) {
   // Modal visibility state
   const [modalVisible, setModalVisible] = useState(false);
-  const [roll, setRoll]= useState('')
+  const [roll, setRoll] = useState('');
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -25,10 +24,18 @@ export default function IssueBookModal({token}) {
     bookAuthor: '',
     bookYear: '',
     bookSemester: '',
-    
   });
 
-  const [message, setMessage] = useState('');
+  // Error state for each field
+  const [errors, setErrors] = useState({
+    bookId: '',
+    bookName: '',
+    bookAuthor: '',
+    bookYear: '',
+    bookSemester: '',
+    roll: '',
+    message:''
+  });
 
   // Handle input change
   const handleInputChange = (name, value) => {
@@ -36,8 +43,13 @@ export default function IssueBookModal({token}) {
       ...formData,
       [name]: value,
     });
+    setErrors({
+      ...errors,
+      message:'',
+      [name]: '' // Clear error when user changes input
+    });
   };
-console.log("roll,", roll)
+
   // Handle form submission
   const handleSubmit = async () => {
     const { bookId, bookName, bookAuthor, bookYear, bookSemester } = formData;
@@ -50,41 +62,53 @@ console.log("roll,", roll)
       bookSemester: parseInt(bookSemester),
     };
 
-    // await bookSubmitService(payload, roll, setMessage);
-    const response=await submitBookService(payload, token, roll);
-    if (response.status=="201"){
-        ToastAndroid.show('book submitted successfully check your mail for confirmation', ToastAndroid.LONG);
-        setModalVisible(false);
-    }
-    else{
-        // ToastAndroid.show(`${response.data.message}`,ToastAndroid.LONG)
-        // console.log(response.data)
-        if (response.data.message)
-            alert(response.data.message)
-        else{
-            console.log(response.data)
-        }
-    
-    }
+    const response = await submitBookService(payload, token, roll);
 
-    // Close the modal after submission
-   
+    if (response.success) {
+      if (response.status === 201) {
+        ToastAndroid.show('Book submitted successfully. Check your mail for confirmation.', ToastAndroid.LONG);
+        setModalVisible(false);
+      } else {
+        ToastAndroid.show('Book submission successful.', ToastAndroid.LONG);
+      }
+    } else {
+      // Handle and set errors based on the response
+      const errorData = response.data;
+    //   console.log("jjjjjjjj")
+      console.log(errorData)
+      const newErrors = {
+        bookId: errorData.bookId || '',
+        bookName: errorData.bookName || '',
+        bookAuthor: errorData.bookAuthor || '',
+        bookYear: errorData.bookYear || '',
+        bookSemester: errorData.bookSemester || '',
+        roll: errorData.roll || '',
+        message:errorData.message || ''
+      };
+      setErrors(newErrors);
+      ToastAndroid.show('Failed to issue book.', ToastAndroid.LONG);
+    }
   };
 
   return (
+    
     <View style={styles.container}>
       <Button title="Issue Book" onPress={() => setModalVisible(true)} />
-
       <Modal
         animationType="slide"
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
+      {/* <ScrollView> */}
+
+        
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Issue Book</Text>
+            {errors.message ? <Text style={styles.errorText}>{errors.message}</Text> : null}
 
+            
             <TextInput
               placeholder="Book ID..."
               value={formData.bookId}
@@ -92,18 +116,24 @@ console.log("roll,", roll)
               style={styles.input}
               keyboardType="numeric"
             />
+            {errors.bookId ? <Text style={styles.errorText}>{errors.bookId}</Text> : null}
+
             <TextInput
               placeholder="Book Name..."
               value={formData.bookName}
               onChangeText={(value) => handleInputChange('bookName', value)}
               style={styles.input}
             />
+            {errors.bookName ? <Text style={styles.errorText}>{errors.bookName}</Text> : null}
+
             <TextInput
               placeholder="Book Author..."
               value={formData.bookAuthor}
               onChangeText={(value) => handleInputChange('bookAuthor', value)}
               style={styles.input}
             />
+            {errors.bookAuthor ? <Text style={styles.errorText}>{errors.bookAuthor}</Text> : null}
+
             <TextInput
               placeholder="Book Year..."
               value={formData.bookYear}
@@ -111,6 +141,8 @@ console.log("roll,", roll)
               style={styles.input}
               keyboardType="numeric"
             />
+            {errors.bookYear ? <Text style={styles.errorText}>{errors.bookYear}</Text> : null}
+
             <TextInput
               placeholder="Book Semester..."
               value={formData.bookSemester}
@@ -118,13 +150,18 @@ console.log("roll,", roll)
               style={styles.input}
               keyboardType="numeric"
             />
+            {errors.bookSemester ? <Text style={styles.errorText}>{errors.bookSemester}</Text> : null}
+
             <TextInput
-              placeholder="Roll Number.."
+              placeholder="Roll Number..."
               value={roll}
               onChangeText={(value) => setRoll(value)}
               style={styles.input}
               keyboardType="numeric"
             />
+            {errors.roll ? <Text style={styles.errorText}>{errors.roll}</Text> : null}
+        {/* </ScrollView> */}
+
 
             <Button title="Submit" onPress={handleSubmit} />
 
@@ -136,14 +173,16 @@ console.log("roll,", roll)
             </TouchableOpacity>
           </View>
         </View>
+        {/* </ScrollView> */}
       </Modal>
+    
+
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    // flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -152,7 +191,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    
   },
   modalContainer: {
     width: 300,
@@ -164,14 +202,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 15,
-    borderRadius:10,
   },
   input: {
     borderColor: 'gray',
     borderWidth: 1,
     marginBottom: 10,
     padding: 10,
-    borderRadius:10
+    borderRadius: 10,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginBottom: 10,
   },
   closeButton: {
     marginTop: 15,
