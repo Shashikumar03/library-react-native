@@ -2,6 +2,7 @@ import { useSignIn } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 import { Text, TextInput, Button, View, TouchableOpacity, StyleSheet, ToastAndroid, ActivityIndicator } from 'react-native';
 import React, { useState } from 'react';
+import { Adminlogin } from '../../Service/Login/AdminLogin';
 
 export default function Login() {
   const { signIn, setActive, isLoaded } = useSignIn();
@@ -11,6 +12,7 @@ export default function Login() {
   const [emailAddress, setEmailAddress] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [buttonDisable, setButtonDisable]= useState(false)
+  const [message, setMessage]= useState(false)
 
   const onSignInPress = React.useCallback(async () => {
     if (!isLoaded) {
@@ -27,6 +29,8 @@ export default function Login() {
       if (signInAttempt.status === 'complete') {
         await setActive({ session: signInAttempt.createdSessionId });
         console.log('Login successful');
+        Adminlogin(emailAddress,password,setMessage)
+        console.log(message)
         router.replace('/home');
         // retu rn
         // Redirect to home

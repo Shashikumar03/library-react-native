@@ -4,13 +4,17 @@ import Model from '../../components/Modal/Model';
 import { useSignIn, useUser } from '@clerk/clerk-expo';
 // import ChatScreen from '../../screen/chatScreen/ChatScreen';
 import { useRouter } from 'expo-router';
+import AdminScreen from '../../screen/Admin/AdminScreen';
 
 export default function Home() {
   const [showChat, setShowChat] = useState(false);
-  const { isSignedIn } = useUser();
+  const { user,isSignedIn } = useUser();
   const router= useRouter()
   console.log("check Signed In", isSignedIn);
+  if(user?.primaryEmailAddress?.emailAddress=="vikash@gmail.com"){
+    return(<AdminScreen/>)
 
+  }
   if (!isSignedIn) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>

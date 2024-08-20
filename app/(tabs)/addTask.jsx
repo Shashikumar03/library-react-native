@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useFocusEffect } from '@react-navigation/native';
 import { GetStudenDetailsByEmail } from '../../Service/StudentService/GetStudentDetailsByEmail'
 import { useUser } from '@clerk/clerk-expo';
+import AdminBooks from '../../screen/Admin/AdminBooks';
 
 export default function Books() {
   const [studentDetails, setStudentDetails] = useState(null)
@@ -10,6 +11,9 @@ export default function Books() {
   const [submittedBooks, setSubmittedBooks] = useState([])
   const [refreshing, setRefreshing] = useState(false)
   const {user, isSignedIn}=useUser()
+  if(user?.primaryEmailAddress?.emailAddress=="vikash@gmail.com"){
+    return (<AdminBooks/>)
+  }
   if(!isSignedIn){
     return <View style={{ flex:1,justifyContent:"center", alignItems:"center"}}>
 

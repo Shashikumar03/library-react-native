@@ -43,13 +43,14 @@ const Chatting = () => {
 
     stompClient.current.connect({}, () => {
       console.log('Connected!!');
+      // console.log(stompClient)
 
       // Subscribe to messages
       stompClient.current.subscribe('/topic/message', (msg) => {
         const receivedMessage = JSON.parse(msg.body);
         setMessages((prevMessages) => [receivedMessage, ...prevMessages]); // Add the new message to the top
       });
-
+      
       // Subscribe to typing status
       stompClient.current.subscribe('/topic/typing', (msg) => {
         const typingData = JSON.parse(msg.body);

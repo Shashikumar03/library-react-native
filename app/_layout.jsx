@@ -60,7 +60,9 @@ export default function RootLayout() {
             headerShown: true,
             
           }}>
-            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(tabs)" options={{
+              title:"welcome"
+            }} />
             {/* <Stack.Screen name="/ChatScreen"   component={ChatScreen}/> */}
             
           </Stack>
