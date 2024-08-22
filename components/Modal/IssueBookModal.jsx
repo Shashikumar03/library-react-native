@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   TextInput,
@@ -8,15 +8,30 @@ import {
   StyleSheet,
   TouchableOpacity,
   ToastAndroid,
-  ScrollView
+  ActivityIndicator
 } from 'react-native';
-import { submitBookService } from '../../Service/AdminService/SubmitBookService';
+import { issueBookService } from '../../Service/AdminService/IssueBookService';
 
 export default function IssueBookModal({ token }) {
   // Modal visibility state
   const [modalVisible, setModalVisible] = useState(false);
   const [roll, setRoll] = useState('');
 
+  useEffect(() => {
+    if (modalVisible) {
+     setFormData({
+        bookId: '',
+        bookName: '',
+        bookAuthor: '',
+        bookYear: '',
+        bookSemester: '',
+
+     })
+      setErrors({});
+      setRoll("")
+    //   setMessage('');
+    }
+  }, [modalVisible]);
   // Form data state
   const [formData, setFormData] = useState({
     bookId: '',
@@ -34,8 +49,11 @@ export default function IssueBookModal({ token }) {
     bookYear: '',
     bookSemester: '',
     roll: '',
-    message:''
+    message: ''
   });
+
+  // Loading state
+  const [loading, setLoading] = useState(false);
 
   // Handle input change
   const handleInputChange = (name, value) => {
@@ -45,7 +63,7 @@ export default function IssueBookModal({ token }) {
     });
     setErrors({
       ...errors,
-      message:'',
+      message: '',
       [name]: '' // Clear error when user changes input
     });
   };
@@ -62,7 +80,11 @@ export default function IssueBookModal({ token }) {
       bookSemester: parseInt(bookSemester),
     };
 
-    const response = await submitBookService(payload, token, roll);
+    setLoading(true); // Start loading
+
+    const response = await issueBookService(payload, token, roll);
+
+    setLoading(false); // Stop loading
 
     if (response.success) {
       if (response.status === 201) {
@@ -74,8 +96,6 @@ export default function IssueBookModal({ token }) {
     } else {
       // Handle and set errors based on the response
       const errorData = response.data;
-    //   console.log("jjjjjjjj")
-      console.log(errorData)
       const newErrors = {
         bookId: errorData.bookId || '',
         bookName: errorData.bookName || '',
@@ -83,7 +103,7 @@ export default function IssueBookModal({ token }) {
         bookYear: errorData.bookYear || '',
         bookSemester: errorData.bookSemester || '',
         roll: errorData.roll || '',
-        message:errorData.message || ''
+        message: errorData.message || ''
       };
       setErrors(newErrors);
       ToastAndroid.show('Failed to issue book.', ToastAndroid.LONG);
@@ -91,7 +111,6 @@ export default function IssueBookModal({ token }) {
   };
 
   return (
-    
     <View style={styles.container}>
       <Button title="Issue Book" onPress={() => setModalVisible(true)} />
       <Modal
@@ -100,15 +119,11 @@ export default function IssueBookModal({ token }) {
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-      {/* <ScrollView> */}
-
-        
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Issue Book</Text>
             {errors.message ? <Text style={styles.errorText}>{errors.message}</Text> : null}
 
-            
             <TextInput
               placeholder="Book ID..."
               value={formData.bookId}
@@ -160,10 +175,12 @@ export default function IssueBookModal({ token }) {
               keyboardType="numeric"
             />
             {errors.roll ? <Text style={styles.errorText}>{errors.roll}</Text> : null}
-        {/* </ScrollView> */}
 
-
-            <Button title="Submit" onPress={handleSubmit} />
+            {loading ? (
+              <ActivityIndicator size="large" color="#0000ff" style={styles.activityIndicator} />
+            ) : (
+              <Button title="Submit" onPress={handleSubmit} />
+            )}
 
             <TouchableOpacity
               style={styles.closeButton}
@@ -173,10 +190,7 @@ export default function IssueBookModal({ token }) {
             </TouchableOpacity>
           </View>
         </View>
-        {/* </ScrollView> */}
       </Modal>
-    
-
     </View>
   );
 }
@@ -222,5 +236,8 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: 'red',
     fontWeight: 'bold',
+  },
+  activityIndicator: {
+    marginTop: 20,
   },
 });

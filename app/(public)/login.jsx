@@ -29,7 +29,10 @@ export default function Login() {
       if (signInAttempt.status === 'complete') {
         await setActive({ session: signInAttempt.createdSessionId });
         console.log('Login successful');
-        Adminlogin(emailAddress,password,setMessage)
+        if(emailAddress=="vikash@gmail.com"|| emailAddress=="adminvikashnegi@gmail.com"){
+          Adminlogin(emailAddress,password,setMessage)
+        }
+       
         console.log(message)
         router.replace('/home');
         // retu rn
