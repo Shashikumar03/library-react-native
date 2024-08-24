@@ -112,7 +112,7 @@ export default function IssueBookModal({ token }) {
 
   return (
     <View style={styles.container}>
-      <Button title="Issue Book" onPress={() => setModalVisible(true)} />
+      <Button title="Create and Issue Book" onPress={() => setModalVisible(true)} />
       <Modal
         animationType="slide"
         transparent={true}
