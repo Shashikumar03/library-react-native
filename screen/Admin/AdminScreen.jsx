@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { searchBookByAdminNameOrBookName } from '../../Service/Books/SearchBookBySerachTerm';
 import { useFocusEffect } from '@react-navigation/native';
+import CustomRadioButton from '../../components/CustomRadioButton';
 
 export default function AdminScreen() {
   const [bookSearchItem, setBookSearchItem] = useState('');
@@ -10,6 +11,7 @@ export default function AdminScreen() {
   const [loading, setLoading] = useState(false);
   const [searchBookError, setSearchBookError] = useState('');
   const [refreshing, setRefreshing] = useState(false); // State for pull-to-refresh
+  const [filter, setFilter] = useState('all'); // State for radio button filter
   const router = useRouter();
 
   // Fetch books
@@ -46,29 +48,51 @@ export default function AdminScreen() {
 
   const handleStudentWithBook = (student) => {
     if (student == null) {
-      alert("this book is not assigned to anyone.")
+      alert("This book is not assigned to anyone.");
     } else {
       const studentData = encodeURIComponent(JSON.stringify(student));
       router.push(`/book/${student.email}?data=${studentData}`);
     }
-
   };
+
+  // Filter books based on the selected radio button
+  const filteredBooks = bookSearchResult.filter((item) => {
+    switch (filter) {
+      case 'available':
+        return item.dateOfIssue && !item.dateOfSubmission ; // Swapped: now showing unavailable books
+      case 'unavailable':
+        return item.dateOfIssue && item.dateOfSubmission || !item.dateOfIssue && !item.dateOfSubmission; // Swapped: now showing available books
+      default:
+        return true; // Show all books
+    }
+  });
+
+  // Determine the section title based on filter
+  const sectionTitle = filter === 'all' ? 'All Books' :
+    filter === 'available' ? 'Unavailable Books' : 'Available Books';
 
   return (
     <View style={styles.mainContainer}>
-      {/* Refresh button */}
-      {/* You can keep this if you want a manual refresh button */}
-      {/* <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
-        <Text style={styles.refreshButtonText}>Refresh</Text>
-      </TouchableOpacity> */}
+      {/* Custom Radio Buttons for Filtering */}
+      <View style={styles.radioGroup}>
+        <CustomRadioButton
+          options={[
+            { id: 'all', label: 'All', value: 'all' },
+            { id: 'available', label: 'Unavailable', value: 'available' },
+            { id: 'unavailable', label: 'Available', value: 'unavailable' },
+          ]}
+          selectedValue={filter}
+          onSelect={setFilter}
+        />
+      </View>
 
       {/* Display book search results */}
-      <Text style={styles.sectionTitle}>All Books</Text>
+      <Text style={styles.sectionTitle}>total {sectionTitle} : {filteredBooks.length}</Text>
       {loading ? (
         <ActivityIndicator size="large" color="#007bff" />
       ) : (
         <FlatList
-          data={bookSearchResult}
+          data={filteredBooks}
           keyExtractor={(item) => item.bookId}
           renderItem={({ item }) => (
             <TouchableOpacity onPress={() => handleStudentWithBook(item?.studentDto)}>
@@ -78,7 +102,7 @@ export default function AdminScreen() {
                 <Text style={styles.label}>Author: <Text style={styles.value}>{item.bookAuthor}</Text></Text>
                 <Text style={styles.label}>Semester: <Text style={styles.value}>{item.bookSemester}</Text></Text>
                 <Text style={styles.label}>Year: <Text style={styles.value}>{item.bookYear}</Text></Text>
-                <Text style={styles.label}>Date of Issue: <Text style={styles.value}>{item.dateOfIssue}</Text></Text>
+                <Text style={styles.label}>Date of Issue: <Text style={styles.value}>{item.dateOfIssue || 'N/A'}</Text></Text>
                 <Text style={styles.label}>Date of Submission: <Text style={styles.value}>{item.dateOfSubmission || 'N/A'}</Text></Text>
                 <Text style={styles.label}>Fine: <Text style={styles.value}>{item.fine || 'N/A'}</Text></Text>
               </View>
@@ -106,16 +130,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f4f4',
     padding: 15,
   },
-  refreshButton: {
-    backgroundColor: '#007bff',
-    padding: 10,
-    borderRadius: 5,
+  radioGroup: {
     marginBottom: 15,
-    alignItems: 'center',
-  },
-  refreshButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
   },
   sectionTitle: {
     fontSize: 18,
