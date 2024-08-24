@@ -25,7 +25,7 @@ export default function AdminScreen() {
       const response = await searchBookByAdminNameOrBookName('');
       if (response.success) {
         setBookSearchResult(response.data);
-        applyFiltersAndSort(response.data);
+        applyFiltersAndSort(response.data, searchQuery);
       } else {
         setSearchBookError(response.data.message);
       }
@@ -43,27 +43,30 @@ export default function AdminScreen() {
 
   // Apply filter and sorting on the books data
   const applyFiltersAndSort = (books, query = '') => {
-    let filtered = books.filter((item) => {
-      // Search operation
-      if (query) {
-        const lowerQuery = query.toLowerCase();
-        return (
-          item.bookName.toLowerCase().includes(lowerQuery) ||
-          item.bookAuthor.toLowerCase().includes(lowerQuery)
-        );
-      }
-      return true;
-    }).filter((item) => {
-      // Filter operation
-      switch (filter) {
-        case 'available':
-          return item.dateOfIssue && item.dateOfSubmission || !item.dateOfIssue && !item.dateOfSubmission;
-        case 'unavailable':
-          return item.dateOfIssue && !item.dateOfSubmission;
-        default:
-          return true; // Show all books
-      }
-    });
+    let filtered = books
+      .filter((item) => {
+        // Search operation
+        if (query) {
+          const lowerQuery = query.toLowerCase();
+          return (
+            item.bookName.toLowerCase().includes(lowerQuery) ||
+            item.bookId.toString().toLowerCase().includes(lowerQuery) ||
+            item.bookAuthor.toLowerCase().includes(lowerQuery)
+          );
+        }
+        return true;
+      })
+      .filter((item) => {
+        // Filter operation
+        switch (filter) {
+          case 'available':
+            return item.dateOfIssue && item.dateOfSubmission || !item.dateOfIssue && !item.dateOfSubmission;
+          case 'unavailable':
+            return item.dateOfIssue && !item.dateOfSubmission;
+          default:
+            return true; // Show all books
+        }
+      });
 
     // Apply sorting
     filtered.sort((a, b) => {
@@ -83,16 +86,14 @@ export default function AdminScreen() {
   // Use effect to fetch books when the component mounts
   useEffect(() => {
     fetchBooks();
-    setSearchQuery("");
-
+    setSearchQuery("")
   }, []);
 
   // Use focus effect to fetch data when the screen is focused
   useFocusEffect(
     useCallback(() => {
       fetchBooks();
-    setSearchQuery("");
-
+      // setSearchQuery("")
     }, [])
   );
 
@@ -100,6 +101,7 @@ export default function AdminScreen() {
   const handleRefresh = () => {
     setRefreshing(true); // Start refreshing animation
     fetchBooks();
+    setSearchQuery("")
   };
 
   // Handle student with book
@@ -124,7 +126,7 @@ export default function AdminScreen() {
   }, [searchQuery, filter, sortOption, bookSearchResult]);
 
   // Determine the section title based on filter
-  const sectionTitle = filter === 'all' ? 'All Books' :
+  const sectionTitle = filter === 'all' ? 'Books' :
     filter === 'available' ? 'Available Books' : 'Unavailable Books';
 
   return (
@@ -132,7 +134,7 @@ export default function AdminScreen() {
       {/* Search Bar */}
       <TextInput
         style={styles.searchInput}
-        placeholder="Search by book name or author"
+        placeholder="Search by book name, book ID, or author"
         value={searchQuery}
         onChangeText={handleSearchQueryChange}
       />
