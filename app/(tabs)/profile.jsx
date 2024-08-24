@@ -14,7 +14,7 @@ export default function Profile() {
   useEffect(() => {
     if (user?.primaryEmailAddress?.emailAddress) {
       GetStudenDetailsByEmail(user.primaryEmailAddress.emailAddress)
-        .then((details) => setStudentDetail(details))
+        .then((details) => setStudentDetail(details.data))
         .catch((error) => console.error("Error fetching student details:", error));
     }
   }, [user]);

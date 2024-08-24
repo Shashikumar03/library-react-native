@@ -91,7 +91,7 @@ export default function IssueBookModal({ token }) {
         ToastAndroid.show('Book submitted successfully. Check your mail for confirmation.', ToastAndroid.LONG);
         setModalVisible(false);
       } else {
-        ToastAndroid.show('Book submission successful.', ToastAndroid.LONG);
+        ToastAndroid.show('Book submission failed.', ToastAndroid.LONG);
       }
     } else {
       // Handle and set errors based on the response
