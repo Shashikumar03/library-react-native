@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, StatusBar, SectionList, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, SectionList, RefreshControl, TextInput, StatusBar } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { GetStudenDetailsByEmail } from '../../Service/StudentService/GetStudentDetailsByEmail';
 import { useUser } from '@clerk/clerk-expo';
@@ -8,6 +8,10 @@ import AdminBooks from '../../screen/Admin/AdminBooks';
 export default function Books() {
   const [studentDetails, setStudentDetails] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [sections, setSections] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [semesterFilter, setSemesterFilter] = useState('');
+  const [authorFilter, setAuthorFilter] = useState('');
   const { user, isSignedIn } = useUser();
 
   if (user?.primaryEmailAddress?.emailAddress === "vikash@gmail.com") {
@@ -41,8 +45,6 @@ export default function Books() {
     }
   };
 
-  const [sections, setSections] = useState([]);
-
   useFocusEffect(
     useCallback(() => {
       fetchStudentData().then(setSections);
@@ -56,6 +58,24 @@ export default function Books() {
       setRefreshing(false);
     });
   }, []);
+
+  const filterAndSearchBooks = (books) => {
+    return books
+      .filter(book =>
+        (book.bookId.toString().includes(searchQuery) ||
+         book.bookName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+         book.bookAuthor.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+      .filter(book =>
+        (!semesterFilter || book.bookSemester.toString() === semesterFilter) &&
+        (!authorFilter || book.bookAuthor.toLowerCase().includes(authorFilter.toLowerCase()))
+      );
+  };
+
+  const filteredSections = sections.map(section => ({
+    ...section,
+    data: filterAndSearchBooks(section.data)
+  }));
 
   const renderBookItem = ({ item }) => (
     <View style={styles.bookItem}>
@@ -76,27 +96,77 @@ export default function Books() {
   );
 
   return (
-    <SectionList
-      sections={sections}
-      keyExtractor={(item) => item.bookId.toString()}
-      renderItem={renderBookItem}
-      renderSectionHeader={({ section: { title } }) => (
-        <View style={styles.sectionHeader}>
-          <Text style={styles.header}>{title}</Text>
-        </View>
-      )}
-      ListEmptyComponent={<Text style={styles.emptyMessage}>No books found.</Text>}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-      contentContainerStyle={styles.container}
-    />
+    <View style={styles.container}>
+      <TextInput
+        style={styles.searchBar}
+        placeholder="Search by Book ID, Name, or Author"
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+      />
+      <View style={styles.filters}>
+        <TextInput
+          style={styles.filterInput}
+          placeholder="Filter by Semester"
+          value={semesterFilter}
+          onChangeText={setSemesterFilter}
+        />
+        <TextInput
+          style={styles.filterInput}
+          placeholder="Filter by Author"
+          value={authorFilter}
+          onChangeText={setAuthorFilter}
+        />
+      </View>
+      <SectionList
+        sections={filteredSections}
+        keyExtractor={(item) => item.bookId.toString()}
+        renderItem={renderBookItem}
+        renderSectionHeader={({ section: { title } }) => (
+          <View style={styles.sectionHeader}>
+            <Text style={styles.header}>{title}</Text>
+          </View>
+        )}
+        ListEmptyComponent={<Text style={styles.emptyMessage}>No books found.</Text>}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    paddingTop:StatusBar.currentHeight||0,
+    
     paddingBottom: 20,
+    backgroundColor: '#f0f0f0',
+  },
+  searchBar: {
+    height: 40,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingLeft: 10,
+    margin: 10,
+    backgroundColor: '#fff',
+  },
+  filters: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    marginBottom: 10,
+  },
+  filterInput: {
+    height: 40,
+    flex: 1,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingLeft: 10,
+    marginHorizontal: 5,
+    backgroundColor: '#fff',
   },
   sectionHeader: {
     backgroundColor: '#f8f8f8',
@@ -132,4 +202,3 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
 });
-
