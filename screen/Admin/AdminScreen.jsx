@@ -1,26 +1,31 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, TextInput, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { searchBookByAdminNameOrBookName } from '../../Service/Books/SearchBookBySerachTerm';
 import { useFocusEffect } from '@react-navigation/native';
 import CustomRadioButton from '../../components/CustomRadioButton';
+import debounce from 'lodash.debounce'; // Make sure to install lodash.debounce
 
 export default function AdminScreen() {
-  const [bookSearchItem, setBookSearchItem] = useState('');
   const [bookSearchResult, setBookSearchResult] = useState([]);
+  const [filteredBooks, setFilteredBooks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchBookError, setSearchBookError] = useState('');
-  const [refreshing, setRefreshing] = useState(false); // State for pull-to-refresh
-  const [filter, setFilter] = useState('all'); // State for radio button filter
+  const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOption, setSortOption] = useState('id_asc');
+  const [modalVisible, setModalVisible] = useState(false);
   const router = useRouter();
 
-  // Fetch books
+  // Fetch books from server
   const fetchBooks = async () => {
     setLoading(true);
     try {
-      const response = await searchBookByAdminNameOrBookName(bookSearchItem);
+      const response = await searchBookByAdminNameOrBookName('');
       if (response.success) {
         setBookSearchResult(response.data);
+        applyFiltersAndSort(response.data);
       } else {
         setSearchBookError(response.data.message);
       }
@@ -33,10 +38,61 @@ export default function AdminScreen() {
     }
   };
 
+  // Debounce function to limit the rate of filtering operations
+  const debouncedApplyFiltersAndSort = useCallback(debounce((query) => applyFiltersAndSort(bookSearchResult, query), 300), [bookSearchResult]);
+
+  // Apply filter and sorting on the books data
+  const applyFiltersAndSort = (books, query = '') => {
+    let filtered = books.filter((item) => {
+      // Search operation
+      if (query) {
+        const lowerQuery = query.toLowerCase();
+        return (
+          item.bookName.toLowerCase().includes(lowerQuery) ||
+          item.bookAuthor.toLowerCase().includes(lowerQuery)
+        );
+      }
+      return true;
+    }).filter((item) => {
+      // Filter operation
+      switch (filter) {
+        case 'available':
+          return item.dateOfIssue && item.dateOfSubmission || !item.dateOfIssue && !item.dateOfSubmission;
+        case 'unavailable':
+          return item.dateOfIssue && !item.dateOfSubmission;
+        default:
+          return true; // Show all books
+      }
+    });
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      const valueA = sortOption.includes('semester') ? String(a.bookSemester) : String(a.bookId);
+      const valueB = sortOption.includes('semester') ? String(b.bookSemester) : String(b.bookId);
+
+      if (sortOption.includes('asc')) {
+        return valueA.localeCompare(valueB, undefined, { numeric: true });
+      } else {
+        return valueB.localeCompare(valueA, undefined, { numeric: true });
+      }
+    });
+
+    setFilteredBooks(filtered);
+  };
+
+  // Use effect to fetch books when the component mounts
+  useEffect(() => {
+    fetchBooks();
+    setSearchQuery("");
+
+  }, []);
+
   // Use focus effect to fetch data when the screen is focused
   useFocusEffect(
     useCallback(() => {
       fetchBooks();
+    setSearchQuery("");
+
     }, [])
   );
 
@@ -46,6 +102,7 @@ export default function AdminScreen() {
     fetchBooks();
   };
 
+  // Handle student with book
   const handleStudentWithBook = (student) => {
     if (student == null) {
       alert("This book is not assigned to anyone.");
@@ -55,39 +112,76 @@ export default function AdminScreen() {
     }
   };
 
-  // Filter books based on the selected radio button
-  const filteredBooks = bookSearchResult.filter((item) => {
-    switch (filter) {
-      case 'available':
-        return item.dateOfIssue && !item.dateOfSubmission ; // Swapped: now showing unavailable books
-      case 'unavailable':
-        return item.dateOfIssue && item.dateOfSubmission || !item.dateOfIssue && !item.dateOfSubmission; // Swapped: now showing available books
-      default:
-        return true; // Show all books
-    }
-  });
+  // Handle search query change with debounce
+  const handleSearchQueryChange = (query) => {
+    setSearchQuery(query);
+    debouncedApplyFiltersAndSort(query);
+  };
+
+  // Handle filter and sort option changes
+  useEffect(() => {
+    applyFiltersAndSort(bookSearchResult, searchQuery);
+  }, [searchQuery, filter, sortOption, bookSearchResult]);
 
   // Determine the section title based on filter
   const sectionTitle = filter === 'all' ? 'All Books' :
-    filter === 'available' ? 'Unavailable Books' : 'Available Books';
+    filter === 'available' ? 'Available Books' : 'Unavailable Books';
 
   return (
     <View style={styles.mainContainer}>
+      {/* Search Bar */}
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search by book name or author"
+        value={searchQuery}
+        onChangeText={handleSearchQueryChange}
+      />
+
       {/* Custom Radio Buttons for Filtering */}
       <View style={styles.radioGroup}>
         <CustomRadioButton
           options={[
             { id: 'all', label: 'All', value: 'all' },
-            { id: 'available', label: 'Unavailable', value: 'available' },
-            { id: 'unavailable', label: 'Available', value: 'unavailable' },
+            { id: 'available', label: 'Available', value: 'available' },
+            { id: 'unavailable', label: 'Unavailable', value: 'unavailable' },
           ]}
           selectedValue={filter}
           onSelect={setFilter}
         />
       </View>
 
+      {/* Sort Button */}
+      <TouchableOpacity style={styles.sortButton} onPress={() => setModalVisible(true)}>
+        <Text style={styles.sortButtonText}>Sort Options</Text>
+      </TouchableOpacity>
+
+      {/* Sort Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity onPress={() => { setSortOption('id_asc'); setModalVisible(false); }}>
+              <Text style={styles.modalOption}>Sort by ID Ascending</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { setSortOption('id_desc'); setModalVisible(false); }}>
+              <Text style={styles.modalOption}>Sort by ID Descending</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { setSortOption('semester_asc'); setModalVisible(false); }}>
+              <Text style={styles.modalOption}>Sort by Semester Ascending</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { setSortOption('semester_desc'); setModalVisible(false); }}>
+              <Text style={styles.modalOption}>Sort by Semester Descending</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Display book search results */}
-      <Text style={styles.sectionTitle}>total {sectionTitle} : {filteredBooks.length}</Text>
+      <Text style={styles.sectionTitle}>Total {sectionTitle}: {filteredBooks.length}</Text>
       {loading ? (
         <ActivityIndicator size="large" color="#007bff" />
       ) : (
@@ -130,8 +224,45 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f4f4',
     padding: 15,
   },
+  searchInput: {
+    height: 40,
+    borderColor: '#ddd',
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+  },
   radioGroup: {
     marginBottom: 15,
+  },
+  sortButton: {
+    padding: 10,
+    backgroundColor: '#007bff',
+    borderRadius: 5,
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  sortButtonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 20,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalOption: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 10,
   },
   sectionTitle: {
     fontSize: 18,
