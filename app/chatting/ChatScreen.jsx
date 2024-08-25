@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 export default function ChatScreen() {
   const [studentDetails, setStudentDetails] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
-  const {isSignedIn}=useUser()
+  const {isSignedIn, user}=useUser()
   const router=useRouter()
 
   const navigation = useNavigation();
@@ -51,7 +51,14 @@ export default function ChatScreen() {
     <TouchableOpacity onPress={()=>onCategoryPressHandler(item)}>
     <View style={styles.itemContainer}>
      
+     <View style={{flexDirection:"row"}}>
      <Text style={styles.itemText}>{item.name}</Text>
+      {
+        item.email==user?.primaryEmailAddress?.emailAddress &&<Text>(You)</Text>
+      }
+         
+     </View>
+
      <Text style={styles.itemText}>{item.department}</Text>
      
      

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { TextInput, Button, View, TouchableOpacity, Text, ToastAndroid, ActivityIndicator } from 'react-native';
 import { useSignUp } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
+import { createUser } from '../../Service/UserService/CreateUser';
 
 export default function SignUpScreen() {
   const { isLoaded, signUp, setActive } = useSignUp();
@@ -57,7 +58,14 @@ export default function SignUpScreen() {
 
       if (completeSignUp.status === 'complete') {
         await setActive({ session: completeSignUp.createdSessionId });
-        router.replace('/Home');
+        payload=
+          {
+            "name":username ,
+            "email": emailAddress
+          }
+        
+        await createUser(payload);
+        router.replace('/home');
       } else {
         console.error(JSON.stringify(completeSignUp, null, 2));
       }
@@ -100,7 +108,7 @@ export default function SignUpScreen() {
             autoCapitalize="none"
             value={username}
             placeholder="Username..."
-            onChangeText={(userName) => setUserName(username)}
+            onChangeText={(username) => setUserName(username)}
             style={{
               fontWeight: "bold",
               padding: 10,

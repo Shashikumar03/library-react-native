@@ -5,6 +5,7 @@ import { searchBookByAdminNameOrBookName } from '../../Service/Books/SearchBookB
 import { useFocusEffect } from '@react-navigation/native';
 import CustomRadioButton from '../../components/CustomRadioButton';
 import debounce from 'lodash.debounce'; // Make sure to install lodash.debounce
+import Slider from '@react-native-community/slider'; // Import the slider component
 
 export default function AdminScreen() {
   const [bookSearchResult, setBookSearchResult] = useState([]);
@@ -16,6 +17,7 @@ export default function AdminScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState('id_asc');
   const [modalVisible, setModalVisible] = useState(false);
+  const [semester, setSemester] = useState(0); // State for the semester slider
   const router = useRouter();
 
   // Fetch books from server
@@ -66,6 +68,10 @@ export default function AdminScreen() {
           default:
             return true; // Show all books
         }
+      })
+      .filter((item) => {
+        // Semester filter
+        return semester === 0 || item.bookSemester === semester;
       });
 
     // Apply sorting
@@ -86,7 +92,7 @@ export default function AdminScreen() {
   // Use effect to fetch books when the component mounts
   useEffect(() => {
     fetchBooks();
-    setSearchQuery("")
+    setSearchQuery("");
   }, []);
 
   // Use focus effect to fetch data when the screen is focused
@@ -101,7 +107,7 @@ export default function AdminScreen() {
   const handleRefresh = () => {
     setRefreshing(true); // Start refreshing animation
     fetchBooks();
-    setSearchQuery("")
+    setSearchQuery("");
   };
 
   // Handle student with book
@@ -123,7 +129,7 @@ export default function AdminScreen() {
   // Handle filter and sort option changes
   useEffect(() => {
     applyFiltersAndSort(bookSearchResult, searchQuery);
-  }, [searchQuery, filter, sortOption, bookSearchResult]);
+  }, [searchQuery, filter, sortOption, bookSearchResult, semester]);
 
   // Determine the section title based on filter
   const sectionTitle = filter === 'all' ? 'Books' :
@@ -149,6 +155,22 @@ export default function AdminScreen() {
           ]}
           selectedValue={filter}
           onSelect={setFilter}
+        />
+      </View>
+
+      {/* Semester Slider */}
+      <View style={styles.sliderContainer}>
+        <Text style={styles.sliderLabel}>Semester: {semester}</Text>
+        <Slider
+          style={styles.slider}
+          minimumValue={0}
+          maximumValue={8}
+          step={1}
+          value={semester}
+          onValueChange={setSemester}
+          minimumTrackTintColor="#007bff"
+          maximumTrackTintColor="#ddd"
+          thumbTintColor="#007bff"
         />
       </View>
 
@@ -236,6 +258,19 @@ const styles = StyleSheet.create({
   },
   radioGroup: {
     marginBottom: 15,
+  },
+  sliderContainer: {
+    marginBottom: 15,
+  },
+  sliderLabel: {
+    fontSize: 16,
+    marginBottom: 5,
+    color: '#333',
+  },
+  slider: {
+    width: '100%',
+    height: 60,
+    
   },
   sortButton: {
     padding: 10,
