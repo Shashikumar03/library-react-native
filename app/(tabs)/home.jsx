@@ -43,9 +43,11 @@ export default function Home() {
       <TouchableOpacity style={styles.questionPaper} onPress={() => alert("This feature is coming soon")}>
         <Text style={{ fontWeight: "bold" }}>Download Previous Year Question Paper</Text>
       </TouchableOpacity>
+      <Text style={{padding:10}}>for enabling chatting . plzz fill the form first</Text>
       <TouchableOpacity style={styles.questionPaper} onPress={handleChatScreen}>
         <Text style={{ fontWeight: "bold" }}>Chatting</Text>
       </TouchableOpacity>
+      
     </View>
   );
 }

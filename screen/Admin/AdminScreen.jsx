@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, TextInput, Modal } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, TextInput, Modal, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { searchBookByAdminNameOrBookName } from '../../Service/Books/SearchBookBySerachTerm';
 import { useFocusEffect } from '@react-navigation/native';
 import CustomRadioButton from '../../components/CustomRadioButton';
 import debounce from 'lodash.debounce'; // Make sure to install lodash.debounce
 import Slider from '@react-native-community/slider'; // Import the slider component
+import IssueAvailableBookModal from '../../components/Modal/IssueAvailabeBookModal';
 
 export default function AdminScreen() {
   const [bookSearchResult, setBookSearchResult] = useState([]);
@@ -19,6 +20,9 @@ export default function AdminScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [semester, setSemester] = useState(0); // State for the semester slider
   const router = useRouter();
+  const [issueModalVisible, setIssueModalVisible] = useState(false);
+  const [selectedBook, setSelectedBook] = useState(null);
+
 
   // Fetch books from server
   const fetchBooks = async () => {
@@ -111,10 +115,32 @@ export default function AdminScreen() {
   };
 
   // Handle student with book
-  const handleStudentWithBook = (student) => {
+  const handleStudentWithBook = (student, item) => {
     if (student == null) {
       alert("This book is not assigned to anyone.");
-    } else {
+    } else if (item.dateOfIssue && item.dateOfSubmission) {
+      Alert.alert(
+        "Book Availability",
+        "This book is available. Do you want to issue this book?",
+        [
+          {
+            text: "No",
+            onPress: () => console.log("No Pressed"),
+            style: "cancel",
+          },
+          {
+            text: "Yes",
+            onPress: () =>{
+              setSelectedBook(item); // Set the selected book data
+              setIssueModalVisible(true); // Show the modal
+            },
+          },
+        ]
+      );
+
+
+    }
+    else {
       const studentData = encodeURIComponent(JSON.stringify(student));
       router.push(`/book/${student.email}?data=${studentData}`);
     }
@@ -135,6 +161,9 @@ export default function AdminScreen() {
   const sectionTitle = filter === 'all' ? 'Books' :
     filter === 'available' ? 'Available Books' : 'Unavailable Books';
 
+  const fetchTheAllBookRecordsAfterIssueAvailableBook=()=>{
+    fetchBooks()
+  }
   return (
     <View style={styles.mainContainer}>
       {/* Search Bar */}
@@ -178,6 +207,16 @@ export default function AdminScreen() {
       <TouchableOpacity style={styles.sortButton} onPress={() => setModalVisible(true)}>
         <Text style={styles.sortButtonText}>Sort Options</Text>
       </TouchableOpacity>
+      <View>
+      {issueModalVisible && (
+      <IssueAvailableBookModal
+        visible={issueModalVisible}
+        onClose={() => setIssueModalVisible(false)}
+        book={selectedBook}
+        fetchBook={fetchTheAllBookRecordsAfterIssueAvailableBook}
+      />
+    )}
+      </View>
 
       {/* Sort Modal */}
       <Modal
@@ -213,7 +252,7 @@ export default function AdminScreen() {
           data={filteredBooks}
           keyExtractor={(item) => item.bookId}
           renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => handleStudentWithBook(item?.studentDto)}>
+            <TouchableOpacity onPress={() => handleStudentWithBook(item?.studentDto, item)}>
               <View style={styles.bookItem}>
                 <Text style={styles.label}>Book Id: <Text style={styles.value}>{item.bookId}</Text></Text>
                 <Text style={styles.label}>Book Name: <Text style={styles.value}>{item.bookName}</Text></Text>
@@ -270,7 +309,7 @@ const styles = StyleSheet.create({
   slider: {
     width: '100%',
     height: 60,
-    
+
   },
   sortButton: {
     padding: 10,

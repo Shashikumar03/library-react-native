@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "expo-library",
-    "slug": "expo-library",
+    "slug": "library-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -19,7 +19,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.shashi03.libraryapp"
     },
     "web": {
       "bundler": "metro",
@@ -31,6 +32,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "9ccf03a5-d98c-4109-92b1-2b7eb44c00b2"
+      }
+    },
+    "owner": "shashi03"
   }
 }
